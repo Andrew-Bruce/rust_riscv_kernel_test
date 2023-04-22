@@ -12,6 +12,8 @@ LD = riscv64-unknown-linux-gnu-ld
 
 RUN = qemu-system-riscv64 -machine virt -bios none -kernel kernel.elf -serial mon:stdio
 
+.PHONY: clean kernel.elf
+
 kernel.elf:
 	cargo build
 	$(CC) -Wall -Wextra -g -Tlinker.ld -o kernel.elf entry.S -L./target/riscv64gc-unknown-none-elf/debug -lchad_os -ffreestanding -nostdlib
@@ -22,7 +24,6 @@ run: kernel.elf
 debug: kernel.elf
 	$(RUN) -gdb tcp::1234 -S
 
-.PHONY: clean
 
 
 clean:
