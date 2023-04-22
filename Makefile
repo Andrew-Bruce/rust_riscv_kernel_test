@@ -1,30 +1,29 @@
+#CFLAGS = -Wall -Wextra -g -ffreestanding -nostdlib
+ASFLAGS = -g 
+LDFLAGS = -Tlinker.ld -nostdlib -L./target/riscv64gc-unknown-none-elf/debug -g
+LDLIBS = -lchad_os
 
-
-
-CC = riscv64-unknown-linux-gnu-gcc
+#CC = riscv64-unknown-linux-gnu-gcc
 AS = riscv64-unknown-linux-gnu-as
 LD = riscv64-unknown-linux-gnu-ld
 
-
-#riscv64-elf-gcc -Wall -Wextra -c -mcmodel=medany kernel.c -o kernel.o -ffreestanding
-#riscv64-elf-as -c entry.S -o entry.o
-#riscv64-elf-ld -T linker.ld -lgcc -nostdlib kernel.o entry.o -o kernel.elf
-
 RUN = qemu-system-riscv64 -machine virt -bios none -kernel kernel.elf -serial mon:stdio
 
-.PHONY: clean kernel.elf
+.PHONY: clean run debug kernel.elf
 
-kernel.elf:
+
+kernel.elf: entry.o
 	cargo build
-	$(CC) -Wall -Wextra -g -Tlinker.ld -o kernel.elf entry.S -L./target/riscv64gc-unknown-none-elf/debug -lchad_os -ffreestanding -nostdlib
+	$(LD) $(ASFLAGS) $^ $(LDFLAGS) $(LDLIBS) -o $@
+
+entry.o: entry.S
+	$(AS) $(ASFLAGS) -c entry.S -o $(@)
 
 run: kernel.elf
 	$(RUN)
 
 debug: kernel.elf
 	$(RUN) -gdb tcp::1234 -S
-
-
 
 clean:
 	cargo clean
