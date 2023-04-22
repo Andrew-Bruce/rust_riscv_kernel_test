@@ -7,3 +7,10 @@ edition = "2021"
 
 [lib]
 crate-type = ["staticlib"]
+
+[dependencies]
+spin = "*"
+
+[dependencies.lazy_static]
+version = "1.*"
+features = ["spin_no_std"]
