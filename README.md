@@ -25,3 +25,5 @@ See https://qemu-project.gitlab.io/qemu/system/gdb.html for more.
 ## stuff
 
 Basically just https://wiki.osdev.org/RISC-V_Bare_Bones but in rust.
+
+https://wiki.osdev.org/RISC-V_Meaty_Skeleton_with_QEMU_virt_board
