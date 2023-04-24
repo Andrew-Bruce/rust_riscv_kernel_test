@@ -39,10 +39,12 @@ PROVIDE(bss_start = .);
 PROVIDE(bss_end = .);
 } >ram AT>ram :bss
 
+PROVIDE(memory_start = ORIGIN(ram));
+PROVIDE(memory_end = ORIGIN(ram) + LENGTH(ram));
+
 PROVIDE(stack_top = . );
 PROVIDE(stack_bot = stack_top + 0x80000); /* make our stack reasonably big */
 
-PROVIDE(memory_end = ORIGIN(ram) + LENGTH(ram));
 PROVIDE(heap_start = stack_bot);
 PROVIDE(heap_size = memory_end - heap_start); /* rest of ram goes to heap */
 
