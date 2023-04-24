@@ -1,9 +1,9 @@
-.section .init
- 
-.option norvc
- 
-.type start, @function
-.global start
+	.section .init
+	
+	.option norvc
+	
+	.type start, @function
+	.global start
 start:
 	.cfi_startproc
 
@@ -14,10 +14,10 @@ start:
 	/* Reset satp */
 	csrw satp, zero
 
-.option push
-.option norelax /* dont optimize, sometimes assumes gp is already initialized */
+	.option push
+	.option norelax /* dont optimize, sometimes assumes gp is already initialized */
 	la gp, global_pointer
-.option pop
+	.option pop
 
 	/* Clear the BSS section */
 	la t0, bss_start
@@ -26,7 +26,7 @@ bss_clear:
 	sd zero, (t0)
 	addi t0, t0, 8
 	bleu t0, t1, bss_clear
- 
+	
 	/* Setup stack */
 	la sp, stack_top
 
@@ -38,11 +38,11 @@ bss_clear:
 
 	/* Jump to kernel! */
 	tail kmain
- 
+	
 	.cfi_endproc
 
 loop_forever:
 	wfi
 	j loop_forever
 
-.end
+	.end

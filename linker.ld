@@ -35,6 +35,7 @@ PROVIDE(global_pointer = .);
 .bss : ALIGN(4K) {
 PROVIDE(bss_start = .);
 *(.bss);
+. += 4096;
 PROVIDE(bss_end = .);
 } >ram AT>ram :bss
 

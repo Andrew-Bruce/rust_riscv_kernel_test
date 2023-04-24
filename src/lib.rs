@@ -88,23 +88,17 @@ fn reboot() {
 //assembly should jump to here, if everything goes right then now rust takes over
 #[no_mangle]
 extern "C" fn kmain() {
-    /*
-       println!(
-       "早晨, 你好, Hello, Здра́вствуйте, नमस्कार, السّلام عليكم, UTF-8 supports all languages!"
-       );
-       */
-
-    println!("hello");
-    println!("asdf ");
+    println!(
+        "早晨, 你好, Hello, Здра́вствуйте, नमस्कार, السّلام عليكم, UTF-8 supports all languages!"
+        );
 
     loop {
         let poo = WRITER.lock().uart_read_byte();
         if poo.is_some() {
             println!("read char {}", poo.unwrap());
             //println!("heap start address: {}", unsafe { HEAP_START} );    
-            println!("mmmm");
         } else {
-            println!("read nothing");
+            //println!("read nothing");
         }
     }
 }
