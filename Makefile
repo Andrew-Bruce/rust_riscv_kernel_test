@@ -9,15 +9,20 @@ LD = riscv64-unknown-linux-gnu-ld
 
 RUN = qemu-system-riscv64 -machine virt -bios none -kernel kernel.elf -serial mon:stdio
 
+OBJS = entry.o symbols.o
+
 .PHONY: clean run debug kernel.elf
 
 
-kernel.elf: entry.o
+kernel.elf: $(OBJS)
 	cargo build
 	$(LD) $(ASFLAGS) $^ $(LDFLAGS) $(LDLIBS) -o $@
 
 entry.o: entry.S
 	$(AS) $(ASFLAGS) -c entry.S -o $(@)
+
+symbols.o: symbols.S
+	$(AS) $(ASFLAGS) -c symbols.S -o $(@)
 
 run: kernel.elf
 	$(RUN)
