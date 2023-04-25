@@ -2,19 +2,32 @@
 #![feature(panic_info_message)]
 mod uart;
 
-const SYSCON_ADDR: usize = 0x0010_0000;
-
 extern "C" {
-    static HEAP_START: usize;
-    static HEAP_SIZE: usize;
-    static BSS_START: usize;
-    static BSS_END: usize;
-    static STACK_TOP: usize;
-    static STACK_BOT: usize;
     static MEMORY_START: usize;
     static MEMORY_END: usize;
-}
 
+    //.text
+    static TEXT_START: usize;
+    static TEXT_END: usize;
+    //.rodata
+    static RODATA_START: usize;
+    static RODATA_END: usize;
+    //.data
+    static DATA_START: usize;
+    static DATA_END: usize;
+
+    //.bss
+    static BSS_START: usize;
+    static BSS_END: usize;
+
+    static STACK_TOP: usize;
+    static STACK_BOT: usize;
+    static HEAP_START: usize;
+    static HEAP_END: usize;
+
+    //syscon mmio
+    static SYSCON_ADDR: usize;
+}
 
 #[no_mangle]
 extern "C" fn eh_personality() {}
@@ -76,16 +89,16 @@ macro_rules! println {
 
 fn poweroff() {
     println!("poweroff now");
-    let syscon_ptr: *mut u32 = SYSCON_ADDR as *mut u32;
     unsafe {
+        let syscon_ptr: *mut u32 = SYSCON_ADDR as *mut u32;
         syscon_ptr.write_volatile(0x5555);
     }
 }
 
 fn reboot() {
     println!("reboot now");
-    let syscon_ptr: *mut u32 = SYSCON_ADDR as *mut u32;
     unsafe {
+        let syscon_ptr: *mut u32 = SYSCON_ADDR as *mut u32;
         syscon_ptr.write_volatile(0x7777);
     }
 }
@@ -94,18 +107,58 @@ fn reboot() {
 //assembly should jump to here, if everything goes right then now rust takes over
 #[no_mangle]
 extern "C" fn kmain() {
-    println!("Memory start: {:#10x}, memory end {:#10x}", unsafe{ MEMORY_START }, unsafe {MEMORY_END} );
-    println!("BSS start {:#10x}, BSS end {:#10x}", unsafe { BSS_START }, unsafe{ BSS_END } );
-    println!("Stack top: {:#10x}, Stack bottom {:#10x}", unsafe{ STACK_TOP }, unsafe { STACK_BOT } );
-    println!("Heap start {:#10x}, Heap size {:#10x}", unsafe { HEAP_START }, unsafe{ HEAP_SIZE } );
+    println!(
+        "Memory start: {:#10x}, end: {:#10x}",
+        unsafe { MEMORY_START },
+        unsafe { MEMORY_END }
+    );
+    println!(
+        "Text   start: {:#10x}, end: {:#10x}",
+        unsafe { TEXT_START },
+        unsafe { TEXT_END }
+    );
+    println!(
+        "ROdata start: {:#10x}, end: {:#10x}",
+        unsafe { RODATA_START },
+        unsafe { RODATA_END }
+    );
+    println!(
+        "Data   start: {:#10x}, end: {:#10x}",
+        unsafe { DATA_START },
+        unsafe { DATA_END }
+    );
+    println!(
+        "BSS    start: {:#10x}, end: {:#10x}",
+        unsafe { BSS_START },
+        unsafe { BSS_END }
+    );
+    println!(
+        "Stack  top:   {:#10x}, bot: {:#10x}",
+        unsafe { STACK_TOP },
+        unsafe { STACK_BOT }
+    );
+    println!(
+        "Heap   start: {:#10x}, end: {:#10x}",
+        unsafe { HEAP_START },
+        unsafe { HEAP_END }
+    );
+    let a: u32 = 4;
+    println!("aaaa = {}", a);
+    println!("ptr of a =      {:p}", &a);
+    println!("ptr of extern = {:p}", unsafe { &SYSCON_ADDR });
+    println!("writer =        {:p}", &WRITER);
+
     println!(
         "早晨, 你好, Hello, Здра́вствуйте, नमस्कार, السّلام عليكم, UTF-8 supports all languages!"
-        );
+    );
     loop {
-        let poo = WRITER.lock().uart_read_byte();
-        if poo.is_some() {
-            println!("read char {}", poo.unwrap());
-            //println!("heap start address: {}", unsafe { HEAP_START} );    
+        let uart_byte: Option<u8> = WRITER.lock().uart_read_byte();
+        if let Some(byte) = uart_byte {
+            println!("read char {}", byte);
+            if byte == b'a' {
+                poweroff();
+            }
+            //println!("heap start address: {}", unsafe { HEAP_START} );
         } else {
             //println!("read nothing");
         }
