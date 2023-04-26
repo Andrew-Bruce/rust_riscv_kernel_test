@@ -103,10 +103,7 @@ fn reboot() {
     }
 }
 
-//program entry point
-//assembly should jump to here, if everything goes right then now rust takes over
-#[no_mangle]
-extern "C" fn kmain() {
+fn print_memory_layout() {
     println!(
         "Memory start: {:#10x}, end: {:#10x}",
         unsafe { MEMORY_START },
@@ -133,15 +130,22 @@ extern "C" fn kmain() {
         unsafe { BSS_END }
     );
     println!(
-        "Stack  top:   {:#10x}, bot: {:#10x}",
-        unsafe { STACK_TOP },
-        unsafe { STACK_BOT }
+        "Stack  bot:   {:#10x}, top: {:#10x}",
+        unsafe { STACK_BOT },
+        unsafe { STACK_TOP }
     );
     println!(
         "Heap   start: {:#10x}, end: {:#10x}",
         unsafe { HEAP_START },
         unsafe { HEAP_END }
     );
+}
+
+//program entry point
+//assembly should jump to here, if everything goes right then now rust takes over
+#[no_mangle]
+extern "C" fn kmain() {
+    print_memory_layout();
     let a: u32 = 4;
     println!("aaaa = {}", a);
     println!("ptr of a =      {:p}", &a);
@@ -155,10 +159,12 @@ extern "C" fn kmain() {
         let uart_byte: Option<u8> = WRITER.lock().uart_read_byte();
         if let Some(byte) = uart_byte {
             println!("read char {}", byte);
-            if byte == b'a' {
+            if byte == b'p' {
                 poweroff();
             }
-            //println!("heap start address: {}", unsafe { HEAP_START} );
+            if byte == b'r' {
+                reboot();
+            }
         } else {
             //println!("read nothing");
         }

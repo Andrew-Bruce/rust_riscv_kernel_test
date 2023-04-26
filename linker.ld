@@ -51,7 +51,7 @@ PROVIDE(memory_end = ORIGIN(ram) + LENGTH(ram));
 PROVIDE(stack_bot = . );
 PROVIDE(stack_top = stack_bot + 0x80000); /* make our stack reasonably big */
 
-PROVIDE(heap_start = stack_bot);
+PROVIDE(heap_start = stack_top);
 PROVIDE(heap_end = memory_end); /* rest of ram goes to heap */
 PROVIDE(heap_size = heap_end - heap_start); /* rest of ram goes to heap */
 
