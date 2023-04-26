@@ -41,16 +41,18 @@ PROVIDE(global_pointer = .);
 .bss : ALIGN(4K) {
      PROVIDE(bss_start = .);
      *(.sbss .sbss.*) *(.bss .bss.*)
-     /*. += 0x20000;*/
      PROVIDE(bss_end = .);
 } >ram AT>ram :bss
+
 
 PROVIDE(memory_start = ORIGIN(ram));
 PROVIDE(memory_end = ORIGIN(ram) + LENGTH(ram));
 
+. = ALIGN(4K);
 PROVIDE(stack_bot = . );
 PROVIDE(stack_top = stack_bot + 0x80000); /* make our stack reasonably big */
 
+. = ALIGN(4K);
 PROVIDE(heap_start = stack_top);
 PROVIDE(heap_end = memory_end); /* rest of ram goes to heap */
 PROVIDE(heap_size = heap_end - heap_start); /* rest of ram goes to heap */
