@@ -27,15 +27,15 @@ const PAGE_SIZE: usize = 4096;
 
 impl Page {
     fn is_free(&self) -> bool {
-         self.flags == PageBits::Empty.byte()
+        self.flags == PageBits::Empty.byte()
     }
 
     fn is_taken(&self) -> bool {
-         (self.flags & PageBits::Taken.byte()) != 0
+        (self.flags & PageBits::Taken.byte()) != 0
     }
 
     fn is_last(&self) -> bool {
-         (self.flags & PageBits::Last.byte()) != 0
+        (self.flags & PageBits::Last.byte()) != 0
     }
 
     fn clear(&mut self) {
@@ -65,7 +65,7 @@ pub fn allocate_pages(num_pages: usize) -> Option<*mut u8> {
 
             for next_page_index in start_page_index..(start_page_index + num_pages) {
                 unsafe {
-                    let curr: *mut Page =  heap_start_page.add(next_page_index) ;
+                    let curr: *mut Page = heap_start_page.add(next_page_index);
 
                     if (*curr).is_taken() {
                         found = false;
@@ -77,7 +77,7 @@ pub fn allocate_pages(num_pages: usize) -> Option<*mut u8> {
 
         if found {
             for next_page_index in start_page_index..(start_page_index + num_pages) {
-                unsafe{
+                unsafe {
                     let curr: *mut Page = heap_start_page.add(next_page_index);
                     assert!(!(*curr).is_taken());
                     assert!(!(*curr).is_last());
@@ -85,14 +85,16 @@ pub fn allocate_pages(num_pages: usize) -> Option<*mut u8> {
                     assert!((*curr).is_taken());
                 }
             }
-            unsafe{
+            unsafe {
                 let last: *mut Page = heap_start_page.add(start_page_index + num_pages - 1);
                 assert!(!(*last).is_last());
                 assert!((*last).is_taken());
-                (*last).mark_last() ;
+                (*last).mark_last();
                 assert!((*last).is_last());
-                println!("ALLOCED MEMORY pages FROM {:p} to {:p}", heap_start_page, last);
-
+                println!(
+                    "ALLOCED MEMORY pages FROM {:p} to {:p}",
+                    heap_start_page.add(start_page_index) , last
+                );
             };
             return Some((unsafe { ALLOC_START } + (PAGE_SIZE * start_page_index)) as *mut u8);
         }
@@ -113,8 +115,8 @@ pub fn deallocate_pages(start_ptr: *mut u8) {
             start_page = start_page.add(1);
         }
     }
-    assert!((unsafe { *start_page }).is_last());
-    (unsafe { *start_page }).clear();
+    assert!(unsafe { (*start_page).is_last()});
+    unsafe { (*start_page).clear() };
 }
 
 pub fn print_page_allocation() {
@@ -155,19 +157,20 @@ pub fn print_page_allocation() {
         if curr_in_page {
             assert!(curr_is_taken);
             num_pages += 1;
-        }else{
-            if curr_is_taken {
-                num_pages = 1;
-                curr_in_page = true;
-                start = curr as usize;
-            }
+        } else if curr_is_taken {
+            num_pages = 1;
+            curr_in_page = true;
+            start = curr as usize;
         }
         if curr_is_last {
             assert!(curr_in_page);
             assert!(curr_is_taken);
             curr_in_page = false;
             let end = curr as usize;
-            println!("Page {:#010x} -> {:#010x} ({} pages)", start, end, num_pages);
+            println!(
+                "Page {:#010x} -> {:#010x} ({} pages)",
+                start, end, num_pages
+                );
         }
     }
     assert!(!curr_in_page);
