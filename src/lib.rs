@@ -1,7 +1,7 @@
 #![no_std]
 #![feature(panic_info_message)]
-mod uart;
 mod memory_alloc;
+mod uart;
 
 extern "C" {
     static MEMORY_START: usize;
@@ -107,41 +107,41 @@ fn reboot() {
 
 fn print_memory_layout() {
     println!(
-        "Memory start: {:#10x}, end: {:#10x}",
+        "Memory | {:#010x} -> {:#010x}",
         unsafe { MEMORY_START },
         unsafe { MEMORY_END }
     );
     println!(
-        "Text   start: {:#10x}, end: {:#10x}",
+        "Text   | {:#010x} -> {:#010x}",
         unsafe { TEXT_START },
         unsafe { TEXT_END }
     );
     println!(
-        "ROdata start: {:#10x}, end: {:#10x}",
+        "ROdata | {:#010x} -> {:#010x}",
         unsafe { RODATA_START },
         unsafe { RODATA_END }
     );
     println!(
-        "Data   start: {:#10x}, end: {:#10x}",
+        "Data   | {:#010x} -> {:#010x}",
         unsafe { DATA_START },
         unsafe { DATA_END }
     );
     println!(
-        "BSS    start: {:#10x}, end: {:#10x}",
+        "BSS    | {:#010x} -> {:#010x}",
         unsafe { BSS_START },
         unsafe { BSS_END }
     );
     println!(
-        "Stack  bot:   {:#10x}, top: {:#10x}",
+        "Stack  | {:#010x} -> {:#010x}",
         unsafe { STACK_BOT },
         unsafe { STACK_TOP }
     );
     println!(
-        "Heap   start: {:#10x}, end: {:#10x}",
+        "Heap   | {:#010x} -> {:#010x}",
         unsafe { HEAP_START },
         unsafe { HEAP_END }
     );
-    assert!( unsafe{ HEAP_SIZE == HEAP_END - HEAP_START} );
+    assert!(unsafe { HEAP_SIZE == HEAP_END - HEAP_START });
 }
 
 //program entry point
@@ -152,6 +152,11 @@ extern "C" fn kmain() {
     println!(
         "早晨, 你好, Hello, Здра́вствуйте, नमस्कार, السّلام عليكم, UTF-8 supports all languages!"
     );
+
+    println!("initializing memory management\n");
+    memory_alloc::init();
+    memory_alloc::print_page_allocation();
+
     loop {
         let uart_byte: Option<u8> = WRITER.lock().uart_read_byte();
         if let Some(byte) = uart_byte {
