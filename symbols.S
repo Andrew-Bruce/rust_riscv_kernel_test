@@ -25,14 +25,18 @@ DATA_END: .dword data_end
 BSS_START: .dword bss_start
 	.global BSS_END 
 BSS_END: .dword bss_end
+
 	.global STACK_TOP
 STACK_TOP: .dword stack_top
 	.global STACK_BOT
 STACK_BOT: .dword stack_bot
+
 	.global HEAP_START
 HEAP_START: .dword heap_start
-	.global HEAP_END 
+	.global HEAP_END
 HEAP_END: .dword heap_end
+	.global HEAP_SIZE
+HEAP_SIZE: .dword heap_size
 
 
 

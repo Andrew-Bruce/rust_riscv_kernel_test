@@ -1,6 +1,7 @@
 #![no_std]
 #![feature(panic_info_message)]
 mod uart;
+mod memory_alloc;
 
 extern "C" {
     static MEMORY_START: usize;
@@ -24,6 +25,7 @@ extern "C" {
     static STACK_BOT: usize;
     static HEAP_START: usize;
     static HEAP_END: usize;
+    static HEAP_SIZE: usize;
 
     //syscon mmio
     static SYSCON_ADDR: usize;
@@ -139,6 +141,7 @@ fn print_memory_layout() {
         unsafe { HEAP_START },
         unsafe { HEAP_END }
     );
+    assert!( unsafe{ HEAP_SIZE == HEAP_END - HEAP_START} );
 }
 
 //program entry point
@@ -146,12 +149,6 @@ fn print_memory_layout() {
 #[no_mangle]
 extern "C" fn kmain() {
     print_memory_layout();
-    let a: u32 = 4;
-    println!("aaaa = {}", a);
-    println!("ptr of a =      {:p}", &a);
-    println!("ptr of extern = {:p}", unsafe { &SYSCON_ADDR });
-    println!("writer =        {:p}", &WRITER);
-
     println!(
         "早晨, 你好, Hello, Здра́вствуйте, नमस्कार, السّلام عليكم, UTF-8 supports all languages!"
     );

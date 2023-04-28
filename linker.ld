@@ -24,7 +24,7 @@ SECTIONS {
       PROVIDE(text_end = .);
 } >ram AT>ram :text
 
-PROVIDE(global_pointer = .);
+
 
 .rodata : ALIGN(4K) {
 	PROVIDE(rodata_start = .);
@@ -34,7 +34,9 @@ PROVIDE(global_pointer = .);
 
 .data : ALIGN(4K) {
       PROVIDE(data_start = .);
-      *(.sdata .sdata.*) *(.data .data.*)
+      *(.sdata .sdata.*)
+      PROVIDE(global_pointer = .);
+      *(.data .data.*)
       PROVIDE(data_end = .);
 } >ram AT>ram :data
 
