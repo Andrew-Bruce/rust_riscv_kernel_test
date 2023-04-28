@@ -64,24 +64,36 @@ pub fn allocate_pages(num_pages: usize) -> Option<*mut u8> {
             found = true;
 
             for next_page_index in start_page_index..(start_page_index + num_pages) {
-                let curr: Page = unsafe { *heap_start_page.add(next_page_index) };
-                if curr.is_taken() {
-                    found = false;
-                    break;
+                unsafe {
+                    let curr: *mut Page =  heap_start_page.add(next_page_index) ;
+
+                    if (*curr).is_taken() {
+                        found = false;
+                        break;
+                    }
                 }
             }
         }
 
         if found {
             for next_page_index in start_page_index..(start_page_index + num_pages) {
-                let mut curr: Page = unsafe { *heap_start_page.add(next_page_index) };
-                assert!(curr.is_taken());
-                curr.mark_taken();
+                unsafe{
+                    let curr: *mut Page = heap_start_page.add(next_page_index);
+                    assert!(!(*curr).is_taken());
+                    assert!(!(*curr).is_last());
+                    (*curr).mark_taken();
+                    assert!((*curr).is_taken());
+                }
             }
-            let mut last: Page = unsafe { *heap_start_page.add(start_page_index + num_pages - 1) };
+            unsafe{
+                let last: *mut Page = heap_start_page.add(start_page_index + num_pages - 1);
+                assert!(!(*last).is_last());
+                assert!((*last).is_taken());
+                (*last).mark_last() ;
+                assert!((*last).is_last());
+                println!("ALLOCED MEMORY pages FROM {:p} to {:p}", heap_start_page, last);
 
-            last.mark_last();
-
+            };
             return Some((unsafe { ALLOC_START } + (PAGE_SIZE * start_page_index)) as *mut u8);
         }
     }
@@ -106,31 +118,32 @@ pub fn deallocate_pages(start_ptr: *mut u8) {
 }
 
 pub fn print_page_allocation() {
-    let num_pages = unsafe { HEAP_SIZE / PAGE_SIZE };
+    let total_pages = unsafe { HEAP_SIZE / PAGE_SIZE };
     let page_data_begin = unsafe { HEAP_START };
-    let page_data_end = unsafe { (page_data_begin as *const Page).add(num_pages) } as usize;
+    let page_data_end = unsafe { (page_data_begin as *const Page).add(total_pages) } as usize;
 
-    println!("page size = {}", PAGE_SIZE);
-    println!("num pages = {}", num_pages);
+    println!("page size   = {}", PAGE_SIZE);
+    println!("total pages = {}", total_pages);
     println!(
         "page data  size = {:#010x}",
         page_data_end - page_data_begin
-    );
-    println!("page alloc size = {:#010x}", num_pages * PAGE_SIZE);
+        );
+    println!("page alloc size = {:#010x}", total_pages * PAGE_SIZE);
     println!(
         "page data   | {:#010x} -> {:#010x}",
         page_data_begin, page_data_end
-    );
+        );
     println!(
         "pages alloc | {:#010x} -> {:#010x}",
         unsafe { ALLOC_START },
-        unsafe { ALLOC_START } + num_pages * PAGE_SIZE
-    );
+        unsafe { ALLOC_START } + total_pages * PAGE_SIZE
+        );
 
     let first_page: *mut Page = page_data_begin as *mut Page;
     let mut curr_in_page: bool = false;
     let mut start: usize = 0;
-    for page_index in 0..num_pages {
+    let mut num_pages: u32 = 0;
+    for page_index in 0..total_pages {
         let curr: *mut Page = unsafe { first_page.add(page_index) };
 
         let curr_is_taken: bool = unsafe { *curr }.is_taken();
@@ -138,28 +151,23 @@ pub fn print_page_allocation() {
         let curr_is_free: bool = unsafe { *curr }.is_free();
 
         assert!(curr_is_taken ^ curr_is_free);
-        if curr_is_last {
-            assert!(curr_is_taken);
-        }
-
-        if curr_is_taken {
-            assert!(!curr_in_page);
-            curr_in_page = true;
-            start = curr as usize;
-        }
 
         if curr_in_page {
             assert!(curr_is_taken);
+            num_pages += 1;
+        }else{
+            if curr_is_taken {
+                num_pages = 1;
+                curr_in_page = true;
+                start = curr as usize;
+            }
         }
-
         if curr_is_last {
             assert!(curr_in_page);
             assert!(curr_is_taken);
             curr_in_page = false;
             let end = curr as usize;
-            if page_index < 10 {
-                println!("Page {:#010x} -> {:#010x}", start, end);
-            }
+            println!("Page {:#010x} -> {:#010x} ({} pages)", start, end, num_pages);
         }
     }
     assert!(!curr_in_page);
@@ -177,9 +185,6 @@ pub fn init() {
             assert!(!(*page).is_taken());
             assert!(!(*page).is_last());
         }
-        if page_index < 10 {
-            println!("{:p}, flags = {}", page, unsafe { (*page).flags });
-        }
     }
 
     unsafe { ALLOC_START = HEAP_START + (num_pages * core::mem::size_of::<Page>()) };
@@ -187,6 +192,6 @@ pub fn init() {
     //align
     let align_to = PAGE_SIZE;
 
-    unsafe { ALLOC_START += ALLOC_START % align_to };
-    assert!(unsafe { ALLOC_START } & align_to == 0);
+    unsafe { ALLOC_START += align_to - (ALLOC_START % align_to) };
+    assert!(unsafe { ALLOC_START } % align_to == 0);
 }

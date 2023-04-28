@@ -156,6 +156,12 @@ extern "C" fn kmain() {
     println!("initializing memory management\n");
     memory_alloc::init();
     memory_alloc::print_page_allocation();
+    
+    println!("memory test ============");
+    let stuff: *mut u8 = memory_alloc::allocate_pages(10).unwrap();
+    println!("allocated stuff at {:p}", stuff);
+    memory_alloc::print_page_allocation();
+
 
     loop {
         let uart_byte: Option<u8> = WRITER.lock().uart_read_byte();
