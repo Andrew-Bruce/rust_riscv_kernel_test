@@ -3,16 +3,19 @@ use crate::HEAP_END;
 use crate::HEAP_SIZE;
 use crate::HEAP_START;
 
+static mut ALLOC_START: usize = 12345;
+pub const PAGE_SIZE: usize = 4096;
+
 #[repr(u8)]
 #[derive(Clone, Copy)]
-pub enum PageBits {
+enum PageBits {
     Empty = 0,
     Taken = 1 << 0,
     Last = 1 << 1,
 }
 
 #[derive(Clone, Copy)]
-pub struct Page {
+struct Page {
     flags: u8,
 }
 
@@ -21,9 +24,6 @@ impl PageBits {
         *self as u8
     }
 }
-
-static mut ALLOC_START: usize = 12345;
-const PAGE_SIZE: usize = 4096;
 
 impl Page {
     fn is_free(&self) -> bool {
@@ -93,7 +93,8 @@ pub fn allocate_pages(num_pages: usize) -> Option<*mut u8> {
                 assert!((*last).is_last());
                 println!(
                     "ALLOCED MEMORY pages FROM {:p} to {:p}",
-                    heap_start_page.add(start_page_index) , last
+                    heap_start_page.add(start_page_index),
+                    last
                 );
             };
             return Some((unsafe { ALLOC_START } + (PAGE_SIZE * start_page_index)) as *mut u8);
@@ -115,7 +116,7 @@ pub fn deallocate_pages(start_ptr: *mut u8) {
             start_page = start_page.add(1);
         }
     }
-    assert!(unsafe { (*start_page).is_last()});
+    assert!(unsafe { (*start_page).is_last() });
     unsafe { (*start_page).clear() };
 }
 
@@ -129,17 +130,17 @@ pub fn print_page_allocation() {
     println!(
         "page data  size = {:#010x}",
         page_data_end - page_data_begin
-        );
+    );
     println!("page alloc size = {:#010x}", total_pages * PAGE_SIZE);
     println!(
         "page data   | {:#010x} -> {:#010x}",
         page_data_begin, page_data_end
-        );
+    );
     println!(
         "pages alloc | {:#010x} -> {:#010x}",
         unsafe { ALLOC_START },
         unsafe { ALLOC_START } + total_pages * PAGE_SIZE
-        );
+    );
 
     let first_page: *mut Page = page_data_begin as *mut Page;
     let mut curr_in_page: bool = false;
@@ -170,7 +171,7 @@ pub fn print_page_allocation() {
             println!(
                 "Page {:#010x} -> {:#010x} ({} pages)",
                 start, end, num_pages
-                );
+            );
         }
     }
     assert!(!curr_in_page);

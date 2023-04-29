@@ -10,7 +10,9 @@ crate-type = ["staticlib"]
 
 [dependencies]
 spin = "*"
+static_assertions = "*"
 
 [dependencies.lazy_static]
 version = "1.*"
 features = ["spin_no_std"]
+

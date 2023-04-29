@@ -1,6 +1,8 @@
 #![no_std]
 #![feature(panic_info_message)]
+
 mod memory_alloc;
+mod mmu;
 mod uart;
 
 extern "C" {
@@ -155,20 +157,6 @@ extern "C" fn kmain() {
 
     println!("initializing memory management\n");
     memory_alloc::init();
-    memory_alloc::print_page_allocation();
-
-    println!("memory test 1 ============");
-    let stuff1: *mut u8 = memory_alloc::allocate_pages(10).unwrap();
-    println!("allocated 10 pages at {:p}", stuff1);
-    let stuff2: *mut u8 = memory_alloc::allocate_pages(69).unwrap();
-    println!("allocated 69 pages at {:p}", stuff2);
-    println!("memory test 2 ============");
-    memory_alloc::deallocate_pages(stuff1);
-    memory_alloc::print_page_allocation();
-    memory_alloc::deallocate_pages(stuff2);
-    memory_alloc::print_page_allocation();
-
-
     memory_alloc::print_page_allocation();
 
     loop {
