@@ -103,6 +103,19 @@ pub fn allocate_pages(num_pages: usize) -> Option<*mut u8> {
     None
 }
 
+pub fn zero_allocate_pages(num_pages: usize) -> Option<*mut u8> {
+    let memory: *mut u8 = allocate_pages(num_pages)?;
+    let size: usize = num_pages * PAGE_SIZE;
+
+    for i in 0..size {
+        unsafe {
+            memory.add(i).write_volatile(0);
+        }
+    }
+
+    return Some(memory);
+}
+
 pub fn deallocate_pages(start_ptr: *mut u8) {
     assert!(!start_ptr.is_null());
     let addr: usize =

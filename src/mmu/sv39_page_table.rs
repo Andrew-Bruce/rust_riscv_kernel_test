@@ -3,7 +3,7 @@
 // then there is a section explaining Sv39
 // i don't really understand it that well ngl
 
-use crate::memory_alloc::PAGE_SIZE;
+use crate::memory_alloc;
 
 const PAGE_TABLE_NUM_ENTRIES: usize = 512;
 
@@ -39,9 +39,12 @@ struct Sv39VirtualAddress {
 }
 
 //A Page table should take up exactly one page and it has to be page aligned or the MMU messes up
-static_assertions::const_assert_eq!(PAGE_SIZE, core::mem::size_of::<Sv39PageTable>());
+static_assertions::const_assert_eq!(
+    memory_alloc::PAGE_SIZE,
+    core::mem::size_of::<Sv39PageTable>()
+);
 struct Sv39PageTableEntry {
-    // PPN means physical page number, an address in physical memory 
+    // PPN means physical page number, an address in physical memory
     // which is just a regular pointer for the kernel
 
     // bits[0..8]   = [V, R, W, X, U, G, A, D]
@@ -88,15 +91,21 @@ impl Sv39VirtualAddress {
     }
 }
 
-
 impl Sv39PageTableEntry {
-    fn new(protection_bits: u8, physical_addr: *const u8) -> Sv39PageTableEntry{
+    fn new(protection_bits: u8, physical_addr: *const u8) -> Sv39PageTableEntry {
         let ppn: usize = (physical_addr as usize) >> 12;
-        Sv39PageTableEntry{
+        Sv39PageTableEntry {
             bits: usize::from(protection_bits) | (ppn << 10),
         }
     }
 
+    fn get_physical_address(&self) -> *mut u8 {
+        let fourty_four_ones: usize = 0xfffffffffff;
+        let ppn = (self.bits >> 10) & fourty_four_ones;
+        let addr: usize = ppn << 12;
+        assert!(addr % memory_alloc::PAGE_SIZE == 0);
+        return addr as *mut u8;
+    }
     fn is_valid(&self) -> bool {
         self.bits & Sv39PageTableEntryBits::V.bits() != 0
     }
@@ -109,31 +118,109 @@ impl Sv39PageTableEntry {
     fn can_execute(&self) -> bool {
         self.bits & Sv39PageTableEntryBits::X.bits() != 0
     }
+    fn is_branch(&self) -> bool {
+        return !(self.can_read() || self.can_write() || self.can_execute());
+    }
+    fn is_leaf(&self) -> bool {
+        return !self.is_branch();
+    }
 }
 
 struct Sv39PageTable {
     entries: [Sv39PageTableEntry; PAGE_TABLE_NUM_ENTRIES],
 }
 
-fn create_virtual_to_physical_mapping(root: &mut Sv39PageTable, vaddr: usize, paddr: usize, protection_bits: u8, level: usize) {
-    
+fn create_virtual_to_physical_mapping(
+    root: &mut Sv39PageTable,
+    vaddr: usize,
+    paddr: usize,
+    protection_bits: u8,
+    level: usize,
+) {
     let vpn: [usize; 3] = (Sv39VirtualAddress { bits: vaddr }).get_vpns();
 
     let nine_ones: usize = 0b111111111;
     let twenty_six_ones: usize = 0x3ff_ffff;
-    let ppn: [usize; 3] = 
-        [
-            (paddr >> 12) & nine_ones,
-            (paddr >> 21) & nine_ones,
-            (paddr >> 30) & twenty_six_ones,
-        ]; 
-    
-    let new_table: *mut u8 = crate::memory_alloc::allocate_pages(1).unwrap();
+    let ppn: [usize; 3] = [
+        (paddr >> 12) & nine_ones,
+        (paddr >> 21) & nine_ones,
+        (paddr >> 30) & twenty_six_ones,
+    ];
 
-    let mut v = &mut root.entries[vpn[2]];
+    let new_table: *mut u8 = memory_alloc::zero_allocate_pages(1).unwrap();
 
-    for i in (level..2).rev() {
-        let protection_bits: u8 = Sv39PageTableEntryBits::V.bits() as u8;
-        *v = Sv39PageTableEntry::new(protection_bits, new_table);
+    let mut v: &mut Sv39PageTableEntry = &mut root.entries[vpn[2]];
+
+    for curr_level in (level..2).rev() {
+        if !v.is_valid() {
+            let protection_bits: u8 = Sv39PageTableEntryBits::V.bits() as u8;
+            *v = Sv39PageTableEntry::new(protection_bits, new_table);
+        }
+        let next_table: *mut Sv39PageTable = v.get_physical_address() as *mut Sv39PageTable;
+        v = unsafe { &mut ((*next_table).entries[vpn[curr_level]]) };
     }
+
+    let entry: Sv39PageTableEntry =
+        Sv39PageTableEntry::new(Sv39PageTableEntryBits::V.bits() as u8, paddr as *const u8);
+
+    *v = entry;
+}
+
+fn delete_page_table(root: &mut Sv39PageTable) {
+    for level_2_index in 0..PAGE_TABLE_NUM_ENTRIES {
+        let level_2_entry: &mut Sv39PageTableEntry = &mut (root.entries[level_2_index]);
+        if level_2_entry.is_valid() && level_2_entry.is_branch() {
+            let level_2_entry_addr = level_2_entry.get_physical_address();
+            let level_1_table: &mut Sv39PageTable =
+                unsafe { (level_2_entry_addr as *mut Sv39PageTable).as_mut().unwrap() };
+
+            for level_1_index in 0..PAGE_TABLE_NUM_ENTRIES {
+                let level_1_entry: &mut Sv39PageTableEntry =
+                    &mut level_1_table.entries[level_1_index];
+
+                if level_1_entry.is_valid() && level_1_entry.is_branch() {
+                    let level_1_entry_addr = level_1_entry.get_physical_address();
+                    let level_0_table: &mut Sv39PageTable =
+                        unsafe { (level_1_entry_addr as *mut Sv39PageTable).as_mut().unwrap() };
+
+                    for level_0_index in 0..PAGE_TABLE_NUM_ENTRIES {
+                        let level_0_entry: &mut Sv39PageTableEntry =
+                            &mut level_0_table.entries[level_0_index];
+
+                        assert!(!level_0_entry.is_branch());
+                    }
+
+                    memory_alloc::deallocate_pages(level_1_entry_addr);
+                }
+            }
+
+            memory_alloc::deallocate_pages(level_2_entry_addr);
+        }
+    }
+}
+
+fn virtual_to_physical_addr(root: &Sv39PageTable, vaddr: usize) -> Result<*mut u8, &str> {
+    let vpn: [usize; 3] = Sv39VirtualAddress { bits: vaddr }.get_vpns();
+
+    let mut v: &Sv39PageTableEntry = &root.entries[vpn[2]];
+
+    for i in (0..=2).rev() {
+        if !v.is_valid() {
+            return Err("invalid page");
+        }
+        if v.is_leaf() {
+            let mask: usize = 1 << (12 + (i * 9)) - 1;
+            let offset: usize = vaddr & mask;
+            let addr: usize = (v.get_physical_address() as usize) & !mask;
+            return Ok((addr | offset) as *mut u8);
+        }
+
+        let entry_addr = v.get_physical_address();
+        let next_table: &mut Sv39PageTable =
+            unsafe { (entry_addr as *mut Sv39PageTable).as_mut().unwrap() };
+
+        v = &next_table.entries[vpn[i - 1]];
+    }
+
+    Err("no leaf found")
 }
