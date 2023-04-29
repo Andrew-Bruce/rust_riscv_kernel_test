@@ -9,7 +9,7 @@ const PAGE_TABLE_NUM_ENTRIES: usize = 512;
 
 #[repr(usize)]
 #[derive(Clone, Copy)]
-enum Sv39PageTableEntryBits {
+pub enum Sv39PageTableEntryBits {
     V = 1 << 0, // Valid
     R = 1 << 1, // Read
     W = 1 << 2, // Write
@@ -21,7 +21,7 @@ enum Sv39PageTableEntryBits {
 }
 
 impl Sv39PageTableEntryBits {
-    fn bits(&self) -> usize {
+    pub fn bits(&self) -> usize {
         *self as usize
     }
 }
@@ -126,11 +126,11 @@ impl Sv39PageTableEntry {
     }
 }
 
-struct Sv39PageTable {
+pub struct Sv39PageTable {
     entries: [Sv39PageTableEntry; PAGE_TABLE_NUM_ENTRIES],
 }
 
-fn create_virtual_to_physical_mapping(
+pub fn create_virtual_to_physical_mapping(
     root: &mut Sv39PageTable,
     vaddr: usize,
     paddr: usize,
@@ -166,7 +166,7 @@ fn create_virtual_to_physical_mapping(
     *v = entry;
 }
 
-fn delete_page_table(root: &mut Sv39PageTable) {
+pub fn delete_page_table(root: &mut Sv39PageTable) {
     for level_2_index in 0..PAGE_TABLE_NUM_ENTRIES {
         let level_2_entry: &mut Sv39PageTableEntry = &mut (root.entries[level_2_index]);
         if level_2_entry.is_valid() && level_2_entry.is_branch() {

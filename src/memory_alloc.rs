@@ -6,6 +6,12 @@ use crate::HEAP_START;
 static mut ALLOC_START: usize = 12345;
 pub const PAGE_SIZE: usize = 4096;
 
+pub fn align(addr: usize, align_val: usize) -> usize {
+    let new = addr + (align_val - (addr % align_val));
+    assert!(new % align_val == 0);
+    return new;
+}
+
 #[repr(u8)]
 #[derive(Clone, Copy)]
 enum PageBits {
@@ -206,9 +212,5 @@ pub fn init() {
 
     unsafe { ALLOC_START = HEAP_START + (num_pages * core::mem::size_of::<Page>()) };
 
-    //align
-    let align_to = PAGE_SIZE;
-
-    unsafe { ALLOC_START += align_to - (ALLOC_START % align_to) };
-    assert!(unsafe { ALLOC_START } % align_to == 0);
+    unsafe { ALLOC_START = align(ALLOC_START, PAGE_SIZE) };
 }

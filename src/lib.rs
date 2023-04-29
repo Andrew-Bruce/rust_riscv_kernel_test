@@ -159,6 +159,21 @@ extern "C" fn kmain() {
     memory_alloc::init();
     memory_alloc::print_page_allocation();
 
+    println!("setting up memory mappings\n");
+
+    let root_table_addr: *mut mmu::sv39_page_table::Sv39PageTable =
+        memory_alloc::allocate_pages(1).unwrap() as *mut mmu::sv39_page_table::Sv39PageTable;
+    let root_table = unsafe { root_table_addr.as_mut().unwrap() };
+    unsafe {
+        mmu::map_range(
+            root_table,
+            HEAP_START,
+            HEAP_END,
+            (mmu::sv39_page_table::Sv39PageTableEntryBits::R.bits()
+                | mmu::sv39_page_table::Sv39PageTableEntryBits::W.bits()) as u8,
+        );
+    }
+
     loop {
         let uart_byte: Option<u8> = WRITER.lock().uart_read_byte();
         if let Some(byte) = uart_byte {
