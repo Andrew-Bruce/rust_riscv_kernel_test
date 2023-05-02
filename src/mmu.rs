@@ -1,18 +1,9 @@
-use crate::memory_alloc;
+//use crate::memory_alloc;
 
-pub mod sv39_page_table;
+pub mod sv39;
 
-pub fn map_range(
-    root: &mut sv39_page_table::Sv39PageTable,
-    start: usize,
-    end: usize,
-    protection_bits: u8,
-) {
-    let paddr_start: usize = memory_alloc::align(start, memory_alloc::PAGE_SIZE);
-    let paddr_end: usize = memory_alloc::align(end, memory_alloc::PAGE_SIZE);
-
-    for paddr in paddr_start..paddr_end {
-        let vaddr = paddr; //since mapping kernel memory to itself
-        sv39_page_table::create_virtual_to_physical_mapping(root, vaddr, paddr, protection_bits, 0);
+pub fn memory_map_region(start: usize, end: usize, root_table: &mut sv39::PageTable) {
+    for addr in start..end {
+        sv39::map(addr, addr, root_table).unwrap();
     }
 }

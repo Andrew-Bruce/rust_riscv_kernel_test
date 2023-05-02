@@ -9,7 +9,7 @@ pub const PAGE_SIZE: usize = 4096;
 pub fn align(addr: usize, align_val: usize) -> usize {
     let new = addr + (align_val - (addr % align_val));
     assert!(new % align_val == 0);
-    return new;
+    new
 }
 
 #[repr(u8)]
@@ -56,7 +56,7 @@ impl Page {
     }
 }
 
-pub fn allocate_pages(num_pages: usize) -> Option<*mut u8> {
+pub fn allocate_pages(num_pages: usize) -> Result<*mut u8, &'static str> {
     let total_pages: usize = unsafe { HEAP_SIZE } / PAGE_SIZE;
 
     let heap_start_page: *mut Page = unsafe { HEAP_START } as *mut Page;
@@ -103,13 +103,13 @@ pub fn allocate_pages(num_pages: usize) -> Option<*mut u8> {
                     last
                 );
             };
-            return Some((unsafe { ALLOC_START } + (PAGE_SIZE * start_page_index)) as *mut u8);
+            return Ok((unsafe { ALLOC_START } + (PAGE_SIZE * start_page_index)) as *mut u8);
         }
     }
-    None
+    Err("unable to find contigious memory to allocate pages")
 }
 
-pub fn zero_allocate_pages(num_pages: usize) -> Option<*mut u8> {
+pub fn zero_allocate_pages(num_pages: usize) -> Result<*mut u8, &'static str> {
     let memory: *mut u8 = allocate_pages(num_pages)?;
     let size: usize = num_pages * PAGE_SIZE;
 
@@ -119,7 +119,7 @@ pub fn zero_allocate_pages(num_pages: usize) -> Option<*mut u8> {
         }
     }
 
-    return Some(memory);
+    Ok(memory)
 }
 
 pub fn deallocate_pages(start_ptr: *mut u8) {

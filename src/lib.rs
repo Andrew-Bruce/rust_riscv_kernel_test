@@ -155,23 +155,20 @@ extern "C" fn kmain() {
         "早晨, 你好, Hello, Здра́вствуйте, नमस्कार, السّلام عليكم, UTF-8 supports all languages!"
     );
 
-    println!("initializing memory management\n");
+    println!("initializing memory management");
     memory_alloc::init();
     memory_alloc::print_page_allocation();
 
-    println!("setting up memory mappings\n");
-
-    let root_table_addr: *mut mmu::sv39_page_table::Sv39PageTable =
-        memory_alloc::allocate_pages(1).unwrap() as *mut mmu::sv39_page_table::Sv39PageTable;
-    let root_table = unsafe { root_table_addr.as_mut().unwrap() };
+    println!("initializing memory mapping");
+    let root_table: &mut mmu::sv39::PageTable = unsafe {
+        (memory_alloc::zero_allocate_pages(1).unwrap() as *mut mmu::sv39::PageTable)
+            .as_mut()
+            .unwrap()
+    };
     unsafe {
-        mmu::map_range(
-            root_table,
-            HEAP_START,
-            HEAP_END,
-            (mmu::sv39_page_table::Sv39PageTableEntryBits::R.bits()
-                | mmu::sv39_page_table::Sv39PageTableEntryBits::W.bits()) as u8,
-        );
+        mmu::memory_map_region(HEAP_START, HEAP_END, root_table);
+        let test: *mut u8 = mmu::sv39::virt_to_phys(HEAP_START + 20, root_table).unwrap();
+        assert!(HEAP_START + 20 == test as usize);
     }
 
     loop {
