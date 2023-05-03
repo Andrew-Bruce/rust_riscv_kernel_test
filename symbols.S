@@ -46,3 +46,5 @@ HEAP_SIZE: .dword heap_size
 
 	.global SYSCON_ADDR
 SYSCON_ADDR: .dword 0x00100000
+	.global UART_ADDR
+UART_ADDR: .dword 0x10000000

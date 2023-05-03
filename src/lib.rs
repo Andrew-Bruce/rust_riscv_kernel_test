@@ -31,6 +31,8 @@ extern "C" {
 
     //syscon mmio
     static SYSCON_ADDR: usize;
+
+    static UART_ADDR: usize;
 }
 
 #[no_mangle]
@@ -71,7 +73,23 @@ extern "C" fn abort() -> ! {
 lazy_static::lazy_static! {
     //since uart is a raw pointer we should manually protect from multithreading with a mutex
     //for now use a simple spin lock but this should be changed to something more efficient later
-    pub static ref WRITER: spin::Mutex<uart::UartWriter> = spin::Mutex::new(uart::UartWriter::new(0x1000_0000));
+    pub static ref WRITER: spin::Mutex<uart::UartWriter> = spin::Mutex::new(uart::UartWriter::new(unsafe{UART_ADDR}));
+
+    pub static ref MEMORY_RANGES: [(usize, usize); 6] = unsafe {
+        [
+            (TEXT_START, TEXT_END),
+            (RODATA_START, RODATA_END),
+            (DATA_START, DATA_END),
+            (BSS_START, BSS_END),
+            (STACK_BOT, STACK_TOP),
+            (HEAP_START, HEAP_END),
+        ]
+    };
+
+    pub static ref MEMORY_ADDRS: [usize; 2]= unsafe{
+        [UART_ADDR, SYSCON_ADDR]
+    };
+
 }
 
 pub fn _print(args: core::fmt::Arguments) {
@@ -147,18 +165,7 @@ fn print_memory_layout() {
 }
 
 fn memory_map_important_stuff(root_table: &mut mmu::sv39::PageTable) {
-    let ranges = unsafe {
-        [
-            (TEXT_START, TEXT_END),
-            (RODATA_START, RODATA_END),
-            (DATA_START, DATA_END),
-            (BSS_START, BSS_END),
-            (STACK_BOT, STACK_TOP),
-            (HEAP_START, HEAP_END),
-        ]
-    };
-
-    for pair in ranges {
+    for pair in MEMORY_RANGES.iter() {
         mmu::memory_map_region(
             pair.0,
             pair.1,
@@ -166,24 +173,27 @@ fn memory_map_important_stuff(root_table: &mut mmu::sv39::PageTable) {
             mmu::sv39::PteBits::Read.val() | mmu::sv39::PteBits::Execute.val(),
         );
     }
+
+    for addr in MEMORY_ADDRS.iter() {
+        mmu::memory_map_region(
+            *addr,
+            *addr + 1,
+            root_table,
+            mmu::sv39::PteBits::Read.val() | mmu::sv39::PteBits::Execute.val(),
+        );
+    }
 }
 
 fn test_memory_map(root_table: &mut mmu::sv39::PageTable) {
-    let ranges = unsafe {
-        [
-            (TEXT_START, TEXT_END),
-            (RODATA_START, RODATA_END),
-            (DATA_START, DATA_END),
-            (BSS_START, BSS_END),
-            (STACK_BOT, STACK_TOP),
-            (HEAP_START, HEAP_END),
-        ]
-    };
-
-    for pair in ranges {
-        for addr in ((pair.0)..(pair.1)).step_by(123) {//test some random addresses
+    for pair in MEMORY_RANGES.iter() {
+        //test some random addresses, just chose a random prime number here
+        for addr in ((pair.0)..(pair.1)).step_by(971) {
             assert!(addr == (mmu::sv39::virt_to_phys(addr, root_table).unwrap() as usize));
         }
+    }
+
+    for addr in MEMORY_ADDRS.iter() {
+        assert!(*addr == (mmu::sv39::virt_to_phys(*addr, root_table).unwrap() as usize));
     }
 }
 //program entry point
