@@ -169,13 +169,18 @@ extern "C" fn kmain() {
     println!("mapping heap region");
     unsafe {
         mmu::memory_map_region(HEAP_START, HEAP_END, root_table);
-        let test: *mut u8 = mmu::sv39::virt_to_phys(HEAP_START + 20, root_table).unwrap();
 
-        println!("{:#x} vs {:#x}", HEAP_START + 20, test as usize);
-        assert!(HEAP_START + 20 == test as usize);
+        for addr in (HEAP_START..HEAP_END).step_by(1000) {
+            let test: *mut u8 = mmu::sv39::virt_to_phys(addr, root_table).unwrap();
+            assert!(addr == test as usize);
+        }
     }
     println!("done");
 
+    println!("testing unmapping region");
+    mmu::sv39::unmap(root_table);
+
+    memory_alloc::print_page_allocation();
     loop {
         let uart_byte: Option<u8> = WRITER.lock().uart_read_byte();
         if let Some(byte) = uart_byte {

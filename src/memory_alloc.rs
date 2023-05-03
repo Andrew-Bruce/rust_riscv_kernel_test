@@ -124,6 +124,7 @@ pub fn zero_allocate_pages(num_pages: usize) -> Result<*mut u8, &'static str> {
 
 pub fn deallocate_pages(start_ptr: *mut u8) {
     assert!(!start_ptr.is_null());
+    assert!((start_ptr as usize) % PAGE_SIZE == 0);
     let addr: usize =
         unsafe { HEAP_START } + ((start_ptr as usize - unsafe { ALLOC_START }) / PAGE_SIZE);
     assert!((unsafe { HEAP_START } <= addr) && (addr < unsafe { HEAP_END }));

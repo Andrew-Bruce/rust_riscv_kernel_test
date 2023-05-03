@@ -4,9 +4,8 @@
 // i don't really understand it that well ngl
 
 use crate::memory_alloc;
-
 const PAGE_TABLE_NUM_ENTRIES: usize = 512;
-const NUM_LEVELS: isize = 3;
+const NUM_LEVELS: usize = 3;
 
 #[repr(usize)]
 #[derive(Copy, Clone)]
@@ -171,7 +170,7 @@ fn virt_to_phys_rec(va: VirtAddr, root: &PageTable, depth: isize) -> Result<usiz
 pub fn virt_to_phys(va: usize, root: &PageTable) -> Result<*mut u8, &str> {
     let va = VirtAddr { bits: va };
 
-    let out = virt_to_phys_rec(va, root, NUM_LEVELS - 1)?;
+    let out = virt_to_phys_rec(va, root, (NUM_LEVELS - 1) as isize)?;
 
     Ok(out as *mut u8)
 }
@@ -191,7 +190,7 @@ fn map_rec(
 
     if (curr_depth as usize) == target_depth {
         let fourty_four_ones: usize = 0xfff_ffff_ffff;
-        let ppn = (pa >> 12 )&  fourty_four_ones;
+        let ppn = (pa >> 12) & fourty_four_ones;
         *pte = Pte::new(ppn, PteBits::Valid.val() | PteBits::Read.val());
         return Ok(());
     }
@@ -214,4 +213,28 @@ fn map_rec(
 
 pub fn map(va: usize, pa: usize, root: &mut PageTable) -> Result<(), &str> {
     return map_rec(VirtAddr { bits: va }, pa, root, 0, 2);
+}
+
+pub fn unmap_rec(root: &mut PageTable, depth: usize) {
+    assert!(depth < NUM_LEVELS);
+
+    for i in 0..PAGE_TABLE_NUM_ENTRIES {
+        let pta = &mut root.entries[i];
+        if !pta.is_valid() {
+            continue;
+        }
+        if depth == 0 {
+            assert!(pta.is_leaf());
+        }
+        if pta.is_branch() {
+            let addr = pta.get_physical_addr();
+            let next_table = unsafe { (addr as *mut PageTable).as_mut().unwrap() };
+            unmap_rec(next_table, depth - 1);
+            memory_alloc::deallocate_pages(addr);
+        }
+    }
+}
+
+pub fn unmap(root: &mut PageTable) {
+    unmap_rec(root, 2);
 }
