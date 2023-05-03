@@ -21,7 +21,7 @@ pub enum PteBits {
 }
 
 impl PteBits {
-    fn val(&self) -> usize {
+    pub fn val(&self) -> usize {
         *self as usize
     }
 }
@@ -179,6 +179,7 @@ fn map_rec(
     va: VirtAddr,
     pa: usize,
     root: &mut PageTable,
+    protection_bits: usize,
     target_depth: usize,
     curr_depth: isize,
 ) -> Result<(), &str> {
@@ -189,9 +190,12 @@ fn map_rec(
     let pte = &mut root.entries[vpn[curr_depth as usize]];
 
     if (curr_depth as usize) == target_depth {
+        if pte.is_valid() {
+            return Err("double mapping page");
+        }
         let fourty_four_ones: usize = 0xfff_ffff_ffff;
         let ppn = (pa >> 12) & fourty_four_ones;
-        *pte = Pte::new(ppn, PteBits::Valid.val() | PteBits::Read.val());
+        *pte = Pte::new(ppn, PteBits::Valid.val() | protection_bits);
         return Ok(());
     }
 
@@ -208,11 +212,18 @@ fn map_rec(
             .unwrap()
     };
 
-    return map_rec(va, pa, next_table, target_depth, curr_depth - 1);
+    return map_rec(
+        va,
+        pa,
+        next_table,
+        protection_bits,
+        target_depth,
+        curr_depth - 1,
+    );
 }
 
-pub fn map(va: usize, pa: usize, root: &mut PageTable) -> Result<(), &str> {
-    return map_rec(VirtAddr { bits: va }, pa, root, 0, 2);
+pub fn map(va: usize, pa: usize, root: &mut PageTable, protection_bits: usize) -> Result<(), &str> {
+    return map_rec(VirtAddr { bits: va }, pa, root, protection_bits, 0, 2);
 }
 
 pub fn unmap_rec(root: &mut PageTable, depth: usize) {

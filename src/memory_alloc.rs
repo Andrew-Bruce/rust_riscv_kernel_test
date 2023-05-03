@@ -97,11 +97,6 @@ pub fn allocate_pages(num_pages: usize) -> Result<*mut u8, &'static str> {
                 assert!((*last).is_taken());
                 (*last).mark_last();
                 assert!((*last).is_last());
-                println!(
-                    "ALLOCED MEMORY pages FROM {:p} to {:p}",
-                    heap_start_page.add(start_page_index),
-                    last
-                );
             };
             return Ok((unsafe { ALLOC_START } + (PAGE_SIZE * start_page_index)) as *mut u8);
         }

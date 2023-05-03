@@ -146,6 +146,46 @@ fn print_memory_layout() {
     assert!(unsafe { HEAP_SIZE == HEAP_END - HEAP_START });
 }
 
+fn memory_map_important_stuff(root_table: &mut mmu::sv39::PageTable) {
+    let ranges = unsafe {
+        [
+            (TEXT_START, TEXT_END),
+            (RODATA_START, RODATA_END),
+            (DATA_START, DATA_END),
+            (BSS_START, BSS_END),
+            (STACK_BOT, STACK_TOP),
+            (HEAP_START, HEAP_END),
+        ]
+    };
+
+    for pair in ranges {
+        mmu::memory_map_region(
+            pair.0,
+            pair.1,
+            root_table,
+            mmu::sv39::PteBits::Read.val() | mmu::sv39::PteBits::Execute.val(),
+        );
+    }
+}
+
+fn test_memory_map(root_table: &mut mmu::sv39::PageTable) {
+    let ranges = unsafe {
+        [
+            (TEXT_START, TEXT_END),
+            (RODATA_START, RODATA_END),
+            (DATA_START, DATA_END),
+            (BSS_START, BSS_END),
+            (STACK_BOT, STACK_TOP),
+            (HEAP_START, HEAP_END),
+        ]
+    };
+
+    for pair in ranges {
+        for addr in ((pair.0)..(pair.1)).step_by(123) {//test some random addresses
+            assert!(addr == (mmu::sv39::virt_to_phys(addr, root_table).unwrap() as usize));
+        }
+    }
+}
 //program entry point
 //assembly should jump to here, if everything goes right then now rust takes over
 #[no_mangle]
@@ -159,28 +199,18 @@ extern "C" fn kmain() {
     memory_alloc::init();
     memory_alloc::print_page_allocation();
 
-    println!("initializing memory mapping");
     println!("creating root table");
     let root_table: &mut mmu::sv39::PageTable = unsafe {
         (memory_alloc::zero_allocate_pages(1).unwrap() as *mut mmu::sv39::PageTable)
             .as_mut()
             .unwrap()
     };
-    println!("mapping heap region");
-    unsafe {
-        mmu::memory_map_region(HEAP_START, HEAP_END, root_table);
-
-        for addr in (HEAP_START..HEAP_END).step_by(1000) {
-            let test: *mut u8 = mmu::sv39::virt_to_phys(addr, root_table).unwrap();
-            assert!(addr == test as usize);
-        }
-    }
+    println!("initializing memory mapping");
+    memory_map_important_stuff(root_table);
+    println!("testing map integrity");
+    test_memory_map(root_table);
     println!("done");
 
-    println!("testing unmapping region");
-    mmu::sv39::unmap(root_table);
-
-    memory_alloc::print_page_allocation();
     loop {
         let uart_byte: Option<u8> = WRITER.lock().uart_read_byte();
         if let Some(byte) = uart_byte {
@@ -191,8 +221,18 @@ extern "C" fn kmain() {
             if byte == b'r' {
                 reboot();
             }
+            if byte == b'b' {
+                break;
+            }
         } else {
             //println!("read nothing");
         }
     }
+
+    println!("unmapping virtual memory");
+    mmu::sv39::unmap(root_table);
+    memory_alloc::deallocate_pages((root_table as *mut mmu::sv39::PageTable) as *mut u8);
+    memory_alloc::print_page_allocation();
+    println!("heap allocations on shutdown, should be zero pages allocated");
+    poweroff();
 }
