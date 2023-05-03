@@ -160,16 +160,21 @@ extern "C" fn kmain() {
     memory_alloc::print_page_allocation();
 
     println!("initializing memory mapping");
+    println!("creating root table");
     let root_table: &mut mmu::sv39::PageTable = unsafe {
         (memory_alloc::zero_allocate_pages(1).unwrap() as *mut mmu::sv39::PageTable)
             .as_mut()
             .unwrap()
     };
+    println!("mapping heap region");
     unsafe {
         mmu::memory_map_region(HEAP_START, HEAP_END, root_table);
         let test: *mut u8 = mmu::sv39::virt_to_phys(HEAP_START + 20, root_table).unwrap();
+
+        println!("{:#x} vs {:#x}", HEAP_START + 20, test as usize);
         assert!(HEAP_START + 20 == test as usize);
     }
+    println!("done");
 
     loop {
         let uart_byte: Option<u8> = WRITER.lock().uart_read_byte();

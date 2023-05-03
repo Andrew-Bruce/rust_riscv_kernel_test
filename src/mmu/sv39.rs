@@ -66,7 +66,7 @@ impl Pte {
         assert!(protection_bits < (1 << 8));
 
         let out = Pte {
-            bits: (ppn << 10) & protection_bits,
+            bits: (ppn << 10) | protection_bits,
         };
         out.assert_not_reserved();
         out
@@ -190,13 +190,15 @@ fn map_rec(
     let pte = &mut root.entries[vpn[curr_depth as usize]];
 
     if (curr_depth as usize) == target_depth {
-        *pte = Pte::new(pa << 12, PteBits::Valid.val());
+        let fourty_four_ones: usize = 0xfff_ffff_ffff;
+        let ppn = (pa >> 12 )&  fourty_four_ones;
+        *pte = Pte::new(ppn, PteBits::Valid.val() | PteBits::Read.val());
         return Ok(());
     }
 
     if !pte.is_valid() {
         let new_page: *mut u8 = memory_alloc::zero_allocate_pages(1).unwrap();
-        let new_entry = Pte::new(new_page as usize, PteBits::Valid.val());
+        let new_entry = Pte::new((new_page as usize) >> 12, PteBits::Valid.val());
         *pte = new_entry;
         assert!(core::ptr::eq(pte.get_physical_addr(), new_page));
     }
@@ -211,5 +213,5 @@ fn map_rec(
 }
 
 pub fn map(va: usize, pa: usize, root: &mut PageTable) -> Result<(), &str> {
-    return map_rec(VirtAddr { bits: va }, pa, root, 2, 2);
+    return map_rec(VirtAddr { bits: va }, pa, root, 0, 2);
 }
