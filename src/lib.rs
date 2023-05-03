@@ -220,6 +220,9 @@ extern "C" fn kmain() {
     println!("testing map integrity");
     test_memory_map(root_table);
     println!("done");
+    println!("enabling mmu");
+    mmu::enable_mmu(root_table as *const mmu::sv39::PageTable);
+    println!("hopefully everything went right");
 
     loop {
         let uart_byte: Option<u8> = WRITER.lock().uart_read_byte();

@@ -36,6 +36,19 @@ bss_clear:
 
 	la ra, loop_forever
 
+	/***********************************/
+
+	/* set 01 to MPP field in mstatus (starting bit 11) */
+	/* set 1 to SPIE field in mstatus (starting bit 5) */
+	
+	li t0, (1 << 11) | (1 << 5)
+	csrw mstatus, t0
+	
+	/* set exeption counter to kmain */
+	
+	la t1, kmain
+	csrw mepc, t1
+	
 	/* Jump to kernel! */
 	tail kmain
 	
