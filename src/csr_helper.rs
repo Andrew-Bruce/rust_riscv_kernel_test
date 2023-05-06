@@ -1,15 +1,13 @@
 use crate::println;
 use core::arch::asm;
 
-pub fn read_misa() {
+fn read_misa() -> Option<usize> {
     let mut val: usize;
     unsafe {
         asm!("csrr {}, misa", out(reg) val);
     }
-    println!("misa register = {:#066b}", val);
     if val == 0 {
-        println!("misa CSR is zero, unsupported, unable to determine ISA version");
-        return;
+        return None;
     }
     let width_bits = core::mem::size_of::<usize>() * 8;
     let mxl = val >> (width_bits - 2);
@@ -21,23 +19,19 @@ pub fn read_misa() {
         _ => None,
     };
 
-    if xlen.is_none() {
+    if let Some(xlen) = xlen {
+        let zeros: usize = (val >> 26) & !(0b11 << ((xlen - 26) - 2));
+        if zeros != 0 {
+            println!("zeros of misa register isn't zero");
+            println!("{:b}", zeros);
+            println!("ignoring for now");
+        }
+    } else {
         println!("invalid MXL value of {}, should be 1, 2, or 3", mxl);
-        return;
-    }
-
-    let xlen: usize = xlen.unwrap();
-
-    let zeros: usize = (val >> 26) & !(0b11 << ((xlen - 26) - 2));
-    if zeros != 0 {
-        println!("zeros of misa register isn't zero");
-        println!("{:b}", zeros);
-        println!("ignoring for now");
     }
 
     let extentions: usize = val & ((1 << 26) - 1);
     println!("misa extentions = {:#028b}", extentions);
-
     for i in 0..26 {
         let letter: char = (b'A' + i) as char;
         let extention_enabled: bool = extentions & (1 << i) != 0;
@@ -83,4 +77,71 @@ pub fn read_misa() {
             }
         }
     }
+    Some(val)
+}
+
+fn read_mvendorid() -> Option<u32> {
+    let mut val: u32;
+    unsafe {
+        asm!("csrr {}, mvendorid", out(reg) val);
+    }
+    if val == 0 {
+        return None;
+    }
+    Some(val)
+}
+
+fn read_marchid() -> Option<usize> {
+    let mut val: usize;
+    unsafe {
+        asm!("csrr {}, marchid", out(reg) val);
+    }
+    if val == 0 {
+        return None;
+    }
+    Some(val)
+}
+
+fn read_mimpid() -> Option<usize> {
+    let mut val: usize;
+    unsafe {
+        asm!("csrr {}, mimpid", out(reg) val);
+    }
+    if val == 0 {
+        return None;
+    }
+    Some(val)
+}
+fn read_mhartid() -> usize {
+    let mut val: usize;
+    unsafe {
+        asm!("csrr {}, mhartid", out(reg) val);
+    }
+    val
+}
+
+pub fn display_csr_infos() {
+    if let Some(misa) = read_misa() {
+        println!("misa      = {:#034x}", misa);
+    } else {
+        println!("misa CSR is zero, unsupported, unable to determine ISA version");
+    }
+    if let Some(mvendorid) = read_mvendorid() {
+        println!("mvendorid = {:#034x}", mvendorid);
+    } else {
+        println!("mvendorid all zeros, not supported");
+    }
+    if let Some(marchid) = read_marchid() {
+        println!("marchid   = {:#034x}", marchid);
+    } else {
+        println!("marchid all zeros, not supported");
+    }
+    if let Some(mimpid) = read_mimpid() {
+        println!("mimpid    = {:#034x}", mimpid);
+    } else {
+        println!("mipmid all zeros, not supported");
+    }
+
+    let mhartid = read_mhartid();
+    println!("curr mhardid = {}", mhartid);
 }

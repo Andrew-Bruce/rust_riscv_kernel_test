@@ -201,7 +201,7 @@ fn test_memory_map(root_table: &mut mmu::sv39::PageTable) {
 //assembly should jump to here, if everything goes right then now rust takes over
 #[no_mangle]
 extern "C" fn kmain() {
-    csr_helper::read_misa();
+    csr_helper::display_csr_infos();
     print_memory_layout();
 
     println!("initializing memory management");
