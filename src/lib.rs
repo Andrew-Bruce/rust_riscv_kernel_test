@@ -1,6 +1,7 @@
 #![no_std]
 #![feature(panic_info_message)]
 
+mod csr_helper;
 mod memory_alloc;
 mod mmu;
 mod uart;
@@ -200,10 +201,8 @@ fn test_memory_map(root_table: &mut mmu::sv39::PageTable) {
 //assembly should jump to here, if everything goes right then now rust takes over
 #[no_mangle]
 extern "C" fn kmain() {
+    csr_helper::read_misa();
     print_memory_layout();
-    println!(
-        "早晨, 你好, Hello, Здра́вствуйте, नमस्कार, السّلام عليكم, UTF-8 supports all languages!"
-    );
 
     println!("initializing memory management");
     memory_alloc::init();

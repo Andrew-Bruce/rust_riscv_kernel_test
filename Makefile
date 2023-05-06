@@ -32,4 +32,4 @@ debug: kernel.elf
 
 clean:
 	cargo clean
-	$(RM) kernel.elf kernel.o entry.o
+	$(RM) kernel.elf $(OBJS)
