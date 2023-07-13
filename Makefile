@@ -3,11 +3,10 @@ ASFLAGS = -g
 LDFLAGS = -Tlinker.ld -nostdlib -L./target/riscv64gc-unknown-none-elf/debug -g
 LDLIBS = -lchad_os
 
-#CC = riscv64-unknown-linux-gnu-gcc
-AS = riscv64-unknown-linux-gnu-as
-LD = riscv64-unknown-linux-gnu-ld
+AS = riscv64-unknown-elf-as
+LD = riscv64-unknown-elf-ld
 
-RUN = qemu-system-riscv64 -machine virt -bios none -kernel kernel.elf -serial mon:stdio
+RUN = qemu-system-riscv64 -machine virt -bios none -kernel kernel.elf -serial mon:stdio -nographic
 
 OBJS = entry.o symbols.o
 

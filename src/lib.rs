@@ -201,9 +201,6 @@ fn test_memory_map(root_table: &mut mmu::sv39::PageTable) {
 #[no_mangle]
 extern "C" fn kmain() {
     print_memory_layout();
-    println!(
-        "早晨, 你好, Hello, Здра́вствуйте, नमस्कार, السّلام عليكم, UTF-8 supports all languages!"
-    );
 
     println!("initializing memory management");
     memory_alloc::init();
